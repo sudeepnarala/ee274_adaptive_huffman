@@ -6,13 +6,13 @@ class CustomList(list):
         super().__init__(item for item in iterable)
 
     def __getitem__(self, idx):
-        print(f"Get requested on {idx}")
-        traceback.print_stack(limit=2)
+        # print(f"Get requested on {idx}")
+        # traceback.print_stack(limit=2)
         return super().__getitem__(idx)
 
     def __setitem__(self, key, value):
-        print(f"Set requested on {key} with value {value}")
-        traceback.print_stack(limit=2)
+        # print(f"Set requested on {key} with value {value}")
+        # traceback.print_stack(limit=2)
         return super().__setitem__(key, value)
 
 # Set requested on 0 with value 255
@@ -130,12 +130,12 @@ class AdaptiveHuffman:
             return [node, None]
 
     def get_leaf(self, alphabet_idx):
-        print("Before", self.leader_node)
+        # print("Before", self.leader_node)
         node = self.representation[alphabet_idx]
         leaf_to_increment = None
         if node <= self.M-1:    # We just saw an unseen node, spawn a new node
             node, leaf_to_increment = self.spawn_new_node(node)
-            print(f"spawn outputted {node}")
+            # print(f"spawn outputted {node}")
         else:
             # Move leaf to the front of block
             self.interchange_leaves(node, self.leader_node[self.block[node]])
@@ -144,11 +144,11 @@ class AdaptiveHuffman:
             if node == self.M and self.M > 0:
                 leaf_to_increment = node
                 node = self.parent[self.block[node]]
-        print("After", self.leader_node)
+        # print("After", self.leader_node)
         return [node, leaf_to_increment]
 
     def slide_and_increment(self, node):
-        print(f"Slide and increment before for {node}", self.leader_node)
+        # print(f"Slide and increment before for {node}", self.leader_node)
         # We know that node is the leader of its block
         node_block = self.block[node]
         # Bug, was doing self.next_block[node]
@@ -163,13 +163,13 @@ class AdaptiveHuffman:
 
         # Is it an error to access uninitialized leader_node[next_block]?? This happens at the very beginning.
         # I think it is an error because get_leaf is not doing its job correctly.
-        print(node, self.ALPHABET_SIZE, self.leader_node[next_block], next_block, self.block[node])
-        print(self.last_node[node_block], node)
+        # print(node, self.ALPHABET_SIZE, self.leader_node[next_block], next_block, self.block[node])
+        # print(self.last_node[node_block], node)
         if (node < self.ALPHABET_SIZE <= self.leader_node[next_block] and
             self.weight[node_block] == self.weight[next_block]) or \
             (self.leader_node[next_block] < self.ALPHABET_SIZE <= node and
             self.weight[node_block] + 1 == self.weight[next_block]):
-            print("here")
+            # print("here")
             to_slide = True
             old_parent = self.parent[next_block]
             old_parity = self.parity[next_block]
@@ -223,7 +223,7 @@ class AdaptiveHuffman:
                 self.parity[node_block] = old_parity
             self.weight[node_block] = self.weight[node_block]+1
         else:   # Moves to a block of its own
-            print("own block")
+            # print("own block")
             block_to_use = self.available_block
             self.available_block = self.next_block[self.available_block]
             self.block[node] = block_to_use
@@ -256,10 +256,12 @@ class AdaptiveHuffman:
             node = old_parent
         else:
             node = node_parent
-        print("Slide and increment after", self.leader_node)
+        # print("Slide and increment after", self.leader_node)
         return node
 
     def find_child(self, node, direction):
+        if node == 510 and direction == 0:
+            import pdb; pdb.set_trace()
         delta = 2*(self.leader_node[self.block[node]]-node) + 1 - direction
         right = self.right_child[self.block[node]]
         gap = right-self.last_node[self.block[right]]
@@ -272,12 +274,12 @@ class AdaptiveHuffman:
             if delta <= gap:
                 return right-delta
             else:
-                return self.leader_node[self.prev_block[self.block[right]]]-delta+gap+2
+                return self.leader_node[self.prev_block[self.block[right]]]-delta+gap+1
 
     # Update tree given that we just got a new element @ alphabet idx
     def update(self, alphabet_idx) -> None:
         node, leaf_to_increment = self.get_leaf(alphabet_idx)
-        print(f"UPDATE GOING THROUGH FOR NODE {node}, {leaf_to_increment}")
+        # print(f"UPDATE GOING THROUGH FOR NODE {node}, {leaf_to_increment}")
         while node is not None:
             node = self.slide_and_increment(node)
         if leaf_to_increment is not None:

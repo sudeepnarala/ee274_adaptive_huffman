@@ -17,9 +17,11 @@ def run_vitters(file_name):
             # print("Updating for "+str(next_char_ascii))
             # print(f"Update complete from {next_char}, got value: {compressor.compress_update(next_char_ascii)}")
             # print("-"*20)
+            node = compressor.representation[next_char_ascii]
             bits = compressor.compress_update(next_char_ascii)
             stream += bits
-            print(f"Sending over bits {bits}")
+            print(f"Sending over bits {bits} for {next_char}: {len(bits)}, node: {node}")
+            # import pdb; pdb.set_trace()
     decompressor.decompress()
 
 
