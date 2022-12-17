@@ -7,3 +7,5 @@ It can be run as follows (from the root project directory):
 ```
 python3 -m vitters_algorithm --file file_you_want_to_compress.txt
 ```
+
+Our final report and slides are also in the root directory of this project.
