@@ -28,7 +28,7 @@ class AdaptiveHuffman:
 
     def __init__(self):
         # Init all data structures to 0s initially
-        self.alphabet: List[int] = [0] * self.ALPHABET_SIZE          # Node value to alphabet index mapping (ascii value)
+        self.alphabet: List[int] = [0] * self.ALPHABET_SIZE          # Node value to alphabet index mapping (i.e. ascii value)
         self.representation: List[int] = [0] * self.ALPHABET_SIZE    # Alphabet index to node value mapping
 
         self.block: List[int] = [0] * self.NUM_NODES_POSSIBLE
@@ -37,12 +37,14 @@ class AdaptiveHuffman:
         self.parent: List[Union[int, None]] = [0] * self.NUM_NODES_POSSIBLE
         # self.parent = CustomList([0]*self.NUM_NODES_POSSIBLE)
         self.parity: List[int] = [0] * self.NUM_NODES_POSSIBLE
-        self.right_child: List[Union[int, None]] = [0] * self.NUM_NODES_POSSIBLE
+        # self.right_child: List[Union[int, None]] = [0] * self.NUM_NODES_POSSIBLE
+        self.right_child: List[int] = CustomList([0]*self.NUM_NODES_POSSIBLE)
         # aka first node in original paper
         self.leader_node: List[int] = [0] * self.NUM_NODES_POSSIBLE
         # self.leader_node: List[int] = CustomList([0]*self.NUM_NODES_POSSIBLE)
         self.last_node: List[int] = [0] * self.NUM_NODES_POSSIBLE
         self.prev_block: List[int] = [0] * self.NUM_NODES_POSSIBLE
+        # self.prev_block: List[int] = CustomList([0] * self.NUM_NODES_POSSIBLE)
         self.next_block: List[int] = [0] * self.NUM_NODES_POSSIBLE
         self.available_block: int = 0
 
@@ -75,12 +77,16 @@ class AdaptiveHuffman:
         self.parity[0] = 0
         self.parent[0] = None
         self.available_block = 1
-        for i in range(self.available_block, self.NUM_NODES_POSSIBLE-2):
+        for i in range(self.available_block, self.NUM_NODES_POSSIBLE-1):
             self.next_block[i] = i+1
         self.next_block[self.NUM_NODES_POSSIBLE-1] = 0
 
     def interchange_leaves(self, node1, node2):
-        self.representation[node1], self.representation[node2] = self.representation[node2], self.representation[node1]
+        # BUG THIS WAS WRONG
+        # self.representation[node1], self.representation[node2] = self.representation[node2], self.representation[node1]
+        # self.alphabet[node1], self.alphabet[node2] = self.alphabet[node2], self.alphabet[node1]
+        self.representation[self.alphabet[node1]] = node2
+        self.representation[self.alphabet[node2]] = node1
         self.alphabet[node1], self.alphabet[node2] = self.alphabet[node2], self.alphabet[node1]
 
     # Originally under FindNode in paper
@@ -97,12 +103,12 @@ class AdaptiveHuffman:
         node = self.M
         node_block = self.block[node]
         # Zero node is @ self.M-1, just like it usually is
-        if self.M > 0:  # I.e. more unseen
-            old_nyt_block = self.block[self.M]
+        if self.M > 0:  # I.e. more unseen are left (so keep NYT node)
+            # old_nyt_block = self.block[self.M]
             # Copy block from old NYT to new NYT
-            self.block[self.M-1] = old_nyt_block
-            self.last_node[old_nyt_block] = self.M-1
-            old_nyt_parent = self.parent[old_nyt_block]
+            self.block[self.M-1] = node_block
+            self.last_node[node_block] = self.M-1
+            old_parent = self.parent[node_block]
             # Bug fix, needs to be self.M-1 not self.M (because this is start of array in Python)
             self.parent[node_block] = self.M - 1 + self.ALPHABET_SIZE
             # MAJOR BUG FIX, I THINK THIS IS WRONG IN THE PAPER
@@ -110,19 +116,20 @@ class AdaptiveHuffman:
             # Leader is now on the right (leader is the newly created 0-weight node)
             self.parity[node_block] = 1
             # Now, create parent @ M+n for these 2 nodes
-            old_available_block = self.available_block
+            new_block = self.available_block
             self.available_block = self.next_block[self.available_block]
-            self.prev_block[old_available_block] = old_nyt_block
-            self.next_block[old_available_block] = self.next_block[node_block]
-            self.prev_block[self.next_block[node_block]] = old_available_block
-            self.next_block[node_block] = old_available_block
-            self.parent[old_available_block] = old_nyt_parent
-            self.parity[old_available_block] = 0
-            self.right_child[old_available_block] = node
-            self.block[self.M-1+self.ALPHABET_SIZE] = old_available_block
-            self.weight[old_available_block] = 0
-            self.leader_node[old_available_block] = self.M-1+self.ALPHABET_SIZE
-            self.last_node[old_available_block] = self.M-1+self.ALPHABET_SIZE
+            # Create a new block for the 0-weight parent node
+            self.prev_block[new_block] = node_block
+            self.next_block[new_block] = self.next_block[node_block]
+            self.prev_block[self.next_block[node_block]] = new_block
+            self.next_block[node_block] = new_block
+            self.parent[new_block] = old_parent
+            self.parity[new_block] = 0
+            self.right_child[new_block] = node
+            self.block[self.M-1+self.ALPHABET_SIZE] = new_block
+            self.weight[new_block] = 0
+            self.leader_node[new_block] = self.M-1+self.ALPHABET_SIZE
+            self.last_node[new_block] = self.M-1+self.ALPHABET_SIZE
             leaf_to_increment = node
             node = self.M-1+self.ALPHABET_SIZE
             return [node, leaf_to_increment]
@@ -148,23 +155,30 @@ class AdaptiveHuffman:
         return [node, leaf_to_increment]
 
     def slide_and_increment(self, node):
+        # print(f"Slide and increment for {node}")
         # print(f"Slide and increment before for {node}", self.leader_node)
         # We know that node is the leader of its block
         node_block = self.block[node]
+        # print(f"Slide and increment for node {node} which has block {node_block} and weight {self.weight[node_block]}")
         # Bug, was doing self.next_block[node]
         next_block = self.next_block[self.block[node]]
         node_parent = self.parent[node_block]     # since node is the leader
         old_parent = node_parent
         old_parity = self.parity[node_block]
         to_slide = False
-        # Means node is a leaf and the next block is a block of internal nodes with same weight OR
-        # node is a an internal node and next block is a block of leaves with weight being 1 higher (need to slide ahead
-        # of block of leaves to maintain invariant that leaves with same implicit number occur before internal nodes)
 
         # Is it an error to access uninitialized leader_node[next_block]?? This happens at the very beginning.
         # I think it is an error because get_leaf is not doing its job correctly.
         # print(node, self.ALPHABET_SIZE, self.leader_node[next_block], next_block, self.block[node])
         # print(self.last_node[node_block], node)
+        # if node == 254:
+        #     import pdb; pdb.set_trace()
+        # if node == 509:
+        #     import pdb; pdb.set_trace()
+
+        # Means node is a leaf and the next block is a block of internal nodes with same weight OR
+        # node is a an internal node and next block is a block of leaves with weight being 1 higher (need to slide ahead
+        # of block of leaves to maintain invariant that leaves with same implicit number occur before internal nodes)
         if (node < self.ALPHABET_SIZE <= self.leader_node[next_block] and
             self.weight[node_block] == self.weight[next_block]) or \
             (self.leader_node[next_block] < self.ALPHABET_SIZE <= node and
@@ -185,16 +199,24 @@ class AdaptiveHuffman:
                 if node_parent != self.NUM_NODES_POSSIBLE-1:
                     if self.block[node_parent+1] != parent_block:
                         if self.right_child[self.block[node_parent+1]] == self.leader_node[next_block]:
-                            self.right_child[self.block[node_parent+1]] = node_parent
+                            # THIS WAS THE BIG BUG FIXED ON 12/16
+                            self.right_child[self.block[node_parent+1]] = node
                         elif self.block[self.right_child[self.block[node_parent+1]]] == next_block:
                             self.right_child[self.block[node_parent+1]] = self.right_child[self.block[node_parent+1]]+1
                 self.parent[next_block] = self.parent[next_block] - 1 + self.parity[next_block]
                 # Flipping parity
                 self.parity[next_block] = 1 - self.parity[next_block]
+                # HUGE BUG: WAS NOT SETTING next_block
+                next_block = self.next_block[next_block]
         else:
             to_slide = False
+
+        # If leaf and next block is a leaf block or internal node and next next block is an internal node block
+        # HUGE BUG, 12/16, DIDN'T HAVE THE FINAL CONDITION, WAS SEEING WEIRD RESULTS
         if (node < self.ALPHABET_SIZE and self.leader_node[next_block] < self.ALPHABET_SIZE) or \
-                (node >= self.ALPHABET_SIZE and self.leader_node[next_block] >= self.ALPHABET_SIZE):
+                (node >= self.ALPHABET_SIZE and self.leader_node[next_block] >= self.ALPHABET_SIZE) \
+                and (self.weight[next_block] == self.weight[node_block]+1):
+            # print(f"INTERNAL AND NEXT IS INTERNAL OR LEAF AND NEXT IS LEAF: {node} {self.weight[self.block[node]]}")
             self.block[node] = next_block
             self.last_node[next_block] = node
             # Current node was the only node in the block
@@ -206,19 +228,29 @@ class AdaptiveHuffman:
             else:
                 if node >= self.ALPHABET_SIZE:
                     self.right_child[node_block] = self.find_child(node-1, 1)
-                    if self.parity[node_block] == 0:
-                        self.parent[node_block] = self.parent[node_block]-1
-                        # Flipping parity
-                        self.parity[node_block] = 1-self.parity[node_block]
-                        self.leader_node[node_block] = node-1
+                # BUG: NEEDED TO UNINDENT
+                if self.parity[node_block] == 0:
+                    self.parent[node_block] = self.parent[node_block]-1
+                # BUG: NEEDED TO UNINDENT
+                # Flipping parity
+                self.parity[node_block] = 1-self.parity[node_block]
+                self.leader_node[node_block] = node-1
+        # Change the circular linked list to reflect the whole block jumping a spot
         elif self.last_node[node_block] == node:
+            # Bug: Error here but might be indicative of something else
             if to_slide:
                 self.prev_block[self.next_block[node_block]] = self.prev_block[node_block]
                 self.next_block[self.prev_block[node_block]] = self.next_block[node_block]
+                # BUG?? SN audible
                 self.prev_block[node_block] = self.prev_block[next_block]
+                # self.prev_block[node_block] = next_block
                 self.next_block[node_block] = next_block
+                # self.next_block[node_block] = self.next_block[next_block]
                 self.prev_block[next_block] = node_block
+                # WHAT IS THIS LINE?
+                # self.prev_block[self.next_block[next_block]] = node_block
                 self.next_block[self.prev_block[node_block]] = node_block
+                # self.next_block[next_block] = node_block    # same thing
                 self.parent[node_block] = old_parent
                 self.parity[node_block] = old_parity
             self.weight[node_block] = self.weight[node_block]+1
@@ -232,22 +264,23 @@ class AdaptiveHuffman:
             if node >= self.ALPHABET_SIZE:
                 self.right_child[block_to_use] = self.right_child[node_block]
                 self.right_child[node_block] = self.find_child(node-1, 1)
-                # THIS SHOULD BE 255 BUT GETTING 256!
-                print(f"Found child for {node-1}: {self.right_child[node_block]}")
                 if self.right_child[block_to_use] == node-1:
                     self.parent[node_block] = node
                 elif self.parity[node_block] == 0:
                     self.parent[node_block] = self.parent[node_block]-1
             elif self.parity[node_block] == 0:
                 self.parent[node_block] = self.parent[node_block]-1
-            # Bug fix: all of this stuff
+            # Bug fix: all of this stuff was not indented
             # Leader is node before you
+            # print("Moving up")
             self.leader_node[node_block] = node-1
             self.parity[node_block] = 1-self.parity[node_block]
             self.prev_block[block_to_use] = self.prev_block[next_block]
             self.next_block[block_to_use] = next_block
             self.prev_block[next_block] = block_to_use
             self.next_block[self.prev_block[block_to_use]] = block_to_use
+            # print(node_block, self.block[510], node)
+            # print(f"SHOULD BE HERE {self.weight[node_block]+1}")
             self.weight[block_to_use] = self.weight[node_block]+1
             self.parent[block_to_use] = old_parent
             self.parity[block_to_use] = old_parity
@@ -260,8 +293,6 @@ class AdaptiveHuffman:
         return node
 
     def find_child(self, node, direction):
-        if node == 510 and direction == 0:
-            import pdb; pdb.set_trace()
         delta = 2*(self.leader_node[self.block[node]]-node) + 1 - direction
         right = self.right_child[self.block[node]]
         gap = right-self.last_node[self.block[right]]
@@ -276,8 +307,12 @@ class AdaptiveHuffman:
             else:
                 return self.leader_node[self.prev_block[self.block[right]]]-delta+gap+1
 
+    def print_tree(self):
+        pass
+
     # Update tree given that we just got a new element @ alphabet idx
     def update(self, alphabet_idx) -> None:
+        # print(f"Update on {alphabet_idx}")
         node, leaf_to_increment = self.get_leaf(alphabet_idx)
         # print(f"UPDATE GOING THROUGH FOR NODE {node}, {leaf_to_increment}")
         while node is not None:

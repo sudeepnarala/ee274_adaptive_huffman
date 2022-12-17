@@ -48,10 +48,12 @@ class AdaptiveHuffmanCompressor(AdaptiveHuffman):
             # print(f"Leader of {node} is {self.leader_node[node_block]}")
             # Update the node (i.e. set node to parent of current node)
             leader_parent = self.parent[node_block]
+            # print(node_block, self.block[508], self.block[509], self.block[510], self.weight[self.block[510]])
             # Intuition: For every 2 movements from leader to node, we have 1 movement from parent to node's parent
             # because balanced tree
             leader_parent_node_parent_implicit_diff = (leader_node_implicit_diff + (1-self.parity[node_block])) // 2
             node = leader_parent - leader_parent_node_parent_implicit_diff
+            # print(f"Walking up {node}")
             # print(leader_node_implicit_diff, leader_parent_node_parent_implicit_diff)
         stack.reverse()
         return stack

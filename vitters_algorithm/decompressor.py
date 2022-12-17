@@ -1,5 +1,6 @@
 from .core import AdaptiveHuffman
 
+
 class CompletedException(Exception):
     pass
 
@@ -15,11 +16,12 @@ class AdaptiveHuffmanDecompress(AdaptiveHuffman):
             raise CompletedException
         ret = self.stream[self.stream_idx]
         self.stream_idx += 1
-        print(f"Consumed {ret}")
+        # print(f"Consumed {ret}")
         return ret
 
     def decompress(self):
-        print("_"*10)
+        # print("_"*10)
+        res = ""
         while True:
             try:
                 # import pdb; pdb.set_trace()
@@ -29,15 +31,19 @@ class AdaptiveHuffmanDecompress(AdaptiveHuffman):
                 else:
                     node = self.NUM_NODES_POSSIBLE-1
                 consumed = 0
+                # import pdb; pdb.set_trace()
                 while node > self.ALPHABET_SIZE-1:
-                    print("Consuming one more", self.M)
-                    node = self.find_child(node, self.receive())
+                    bit = self.receive()
+                    # print(f"Node: {node}")
+                    node = self.find_child(node, bit)
+                    # print(f"Node {node} after consuming bit {bit}")
                     consumed += 1
-                    print(f"Node {node}")
+                # print(f"Node {node}, leader: {self.leader_node[self.block[node]]}")
 
                 if node == self.M-1:
-                    print("Consuming more")
+                    # print(f"GOT NYT and consumed {consumed} bits to get here")
                     node = 0
+                    # print(self.E)
                     for i in range(self.E):
                         node = 2*node+self.receive()
                         consumed += 1
@@ -49,8 +55,11 @@ class AdaptiveHuffmanDecompress(AdaptiveHuffman):
                     # No need to do +1 here because didn't do -1 in compressor
                 # print(node, self.alphabet[node])
                 # THIS IS A PATCH: FIGURE OUT WHY IT IS WORKING!
-                print(f"DECOMPRESSOR GOT: {chr(self.alphabet[node])}, consumed: {consumed}, node: {node}")
-                self.update(node)
+                # print(f"DECOMPRESSOR GOT letter: {chr(self.alphabet[node])}, consumed: {consumed}, @ node: {node}")
+                res += chr(self.alphabet[node])
+                # Bug, was passing in node
+                self.update(self.alphabet[node])
             except CompletedException:
-                print("Done processing input on decompressor side")
+                # print("Done processing input on decompressor side")
                 break
+        # print(res)
