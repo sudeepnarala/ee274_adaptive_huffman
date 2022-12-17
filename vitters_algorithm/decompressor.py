@@ -54,7 +54,6 @@ class AdaptiveHuffmanDecompress(AdaptiveHuffman):
                         node = node+self.R
                     # No need to do +1 here because didn't do -1 in compressor
                 # print(node, self.alphabet[node])
-                # THIS IS A PATCH: FIGURE OUT WHY IT IS WORKING!
                 # print(f"DECOMPRESSOR GOT letter: {chr(self.alphabet[node])}, consumed: {consumed}, @ node: {node}")
                 res += chr(self.alphabet[node])
                 # Bug, was passing in node
